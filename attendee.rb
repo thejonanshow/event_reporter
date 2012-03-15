@@ -20,6 +20,10 @@ class Attendee < OpenStruct
     end
   end
 
+  def self.default_headers
+    ORDERED_KEYS
+  end
+
   def keys
     ORDERED_KEYS
   end

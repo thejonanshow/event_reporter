@@ -3,11 +3,11 @@ class EventReporter
     'help'  => "Display these commands.",
     'load'  => "Load a file (defaults to 'event_attendees.csv')",
     'find'  => "Find a record.",
-    'save to' => "Save the queue to a file.",
+    'queue save to' => "Save the queue to a file.",
     'queue clear' => "Empty the queue.",
     'queue count' => "Count the queue.",
     'queue print' => "Print the queue.",
-    'queue sort by' => "Sort the queue by attribute."
+    'queue print by' => "Sort the queue by attribute."
   }
   CSV_OPTIONS = {
     :headers => true,
@@ -66,53 +66,13 @@ class EventReporter
     puts "Load attendees first." and return if @attendees.empty?
 
     attribute = arguments.first
-    criteria = arguments.last if arguments.length > 1
+    criteria = arguments[1..-1] if arguments.length > 1
 
     if valid_find?(attribute, criteria)
       search_by attribute, criteria
     else
       puts "Invalid find."
     end
-  end
-  
-  def queue(type)
-    case type.first
-    when 'count'
-      puts @queue.count
-    when 'clear'
-      @queue = []
-      puts "Cleared queue."
-    when 'print'
-      queue_print
-    when 'sort'
-      queue_sort_by(type[2..-1].join)
-    end
-  end
-
-  def queue_print
-    if @queue.first.nil?
-      puts "Load a file first."
-    else
-      padding = calculate_print_padding
-      puts @queue.first.headers_with_padding(padding)
-    end
-
-    @queue.each do |attendee|
-      puts attendee.print_with_padding(padding)
-    end
-  end
-
-  def queue_sort_by(attribute)
-    error_message = "Invalid sort. Try 'queue sort by <attribute>'."
-    puts error_message and return false unless attribute.split(' ').length == 1
-
-    @queue = @queue.sort_by {|attendee| attendee.send(attribute.to_sym)}
-    queue_print
-  end
-
-  def calculate_print_padding
-    all_words = @queue.first.headers.split(' ').push @queue.map {|attendee| attendee.values}
-    [20, all_words.flatten.compact.map(&:length).max].min
   end
 
   def valid_find?(attribute, criteria)
@@ -124,12 +84,54 @@ class EventReporter
 
   def search_by(attribute, criteria)
     @queue = @attendees.select do |attendee|
-      attendee.send(attribute.to_sym).downcase == criteria.downcase
+      attendee.send(attribute.to_sym).downcase == criteria.join(' ').downcase
     end
 
     qlength = @queue.length
     puts "#{qlength} attendees found#{qlength > 0 ? ' and added to queue.' : '.'}"
     queue_print
+  end
+
+  def queue(type)
+    case type.join(' ')
+    when 'count'
+      puts @queue.count
+    when 'clear'
+      @queue = []
+      puts "Cleared queue."
+    when 'print'
+      queue_print
+    when /^print by/
+      queue_sort_by(type[2..-1].join)
+    when /^save to/
+      save(type[1..-1])
+    end
+  end
+
+  def queue_print(queue = @queue)
+    if queue.first.nil?
+      puts "Queue is empty. There is nothing to print."
+    else
+      padding = calculate_print_padding
+      puts queue.first.headers_with_padding(padding)
+    end
+
+    queue.each do |attendee|
+      puts attendee.print_with_padding(padding)
+    end
+  end
+
+  def queue_sort_by(attribute)
+    error_message = "Invalid sort. Try 'queue sort by <attribute>'."
+    puts error_message and return false unless attribute.split(' ').length == 1
+
+    sorted_queue = @queue.sort_by {|attendee| attendee.send(attribute.to_sym)}
+    queue_print(sorted_queue)
+  end
+
+  def calculate_print_padding
+    all_words = @queue.first.headers.split(' ').push @queue.map {|attendee| attendee.values}
+    [20, all_words.flatten.compact.map(&:length).max].min
   end
 
   def is_valid_filename?(filename)
@@ -159,12 +161,12 @@ class EventReporter
   def parse_attendees(file)
     file.rewind
     @attendees = []
+    @queue = []
 
     file.each do |line|
       @attendees << Attendee.new(line)
     end
 
-    @queue = @attendees
     puts "#{@attendees.length} attendees total."
   end
 
@@ -179,14 +181,24 @@ class EventReporter
     errormessage = "Invalid save. Try 'save to <filename>'."
     puts errormessage and return false unless arguments.length == 2 && arguments.first == 'to'
 
+    headers = setup_headers
     filename = arguments.last
     CSV.open(filename, 'wb') do |output|
+      output << headers
+
       @queue.each do |line|
-        output << line.marshal_dump.keys  if output.lineno == 0
         output << line.marshal_dump.values
       end
     end
 
     puts "Queue saved to #{filename}."
+  end
+
+  def setup_headers
+    if @attendees.first
+      @attendees.first.marshal_dump.keys
+    else
+      Attendee.default_headers
+    end
   end
 end
