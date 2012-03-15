@@ -13,6 +13,7 @@ class EventReporter
     :headers => true,
     :header_converters => :symbol
   }
+  USE_ORIGINAL_HEADERS = false
 
   def initialize
     @attendees = []
@@ -187,7 +188,7 @@ class EventReporter
       output << headers
 
       @queue.each do |line|
-        output << line.marshal_dump.values
+        output << setup_values(headers, line)
       end
     end
 
@@ -195,10 +196,35 @@ class EventReporter
   end
 
   def setup_headers
-    if @attendees.first
+    if USE_ORIGINAL_HEADERS
       @attendees.first.marshal_dump.keys
     else
       Attendee.default_headers
     end
+  end
+
+  def setup_values(headers, attendee)
+    values = []
+
+    if headers == Attendee.default_headers 
+      values = default_values(headers, attendee)
+    else
+      #get values from marshal_dump
+    end
+    values
+  end
+
+  def default_values(headers, attendee)
+    values = []
+    headers.each do |attribute|
+      if attendee.respond_to?(attribute.to_sym)
+        values.push attendee.send(attribute.to_sym)
+      elsif attribute == 'address'
+        values.push attendee.street
+      elsif attribute == 'email'
+        values.push attendee.email_address
+      end
+    end
+    values
   end
 end

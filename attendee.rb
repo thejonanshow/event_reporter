@@ -89,13 +89,14 @@ class Attendee < OpenStruct
     output = [
       self.last_name,
       self.first_name,
-      self.email_address,
+      (self.email ? self.email : self.email_address),
       self.zipcode,
       self.city,
       self.state,
-      self.street
-    ].map {|att| att[0..padding-1].ljust(padding)}
-
+      (self.address ? self.address : self.street)
+    ]
+    debugger if output.include? nil
+    output.map {|att| att[0..padding-1].ljust(padding)}
     output.join(' ')
   end
 end
