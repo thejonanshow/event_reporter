@@ -1,5 +1,5 @@
 class Prompt
-  exit_commands = %w(quit exit q x close e die oh god please don't kill me)
+  exit_commands = %w(quit exit e q x close die oh please god don't kill me)
   EXIT_COMMANDS = exit_commands
 
   def initialize
