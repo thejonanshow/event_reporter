@@ -86,17 +86,23 @@ class Attendee < OpenStruct
   end
 
   def print_with_padding(padding)
-    output = [
-      self.last_name,
+    output =
+     [self.last_name,
       self.first_name,
-      (self.email ? self.email : self.email_address),
+      attendee_email(self),
       self.zipcode,
       self.city,
       self.state,
-      (self.address ? self.address : self.street)
-    ]
-    debugger if output.include? nil
+      attendee_address(self)]
     output.map {|att| att[0..padding-1].ljust(padding)}
     output.join(' ')
+  end
+
+  def attendee_email(attendee)
+    (attendee.email ? attendee.email : attendee.email_address)
+  end
+
+  def attendee_address(attendee)
+    (attendee.address ? attendee.address : attendee.street)
   end
 end

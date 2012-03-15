@@ -88,8 +88,8 @@ class EventReporter
       attendee.send(attribute.to_sym).downcase == criteria.join(' ').downcase
     end
 
-    qlength = @queue.length
-    puts "#{qlength} attendees found#{qlength > 0 ? ' and added to queue.' : '.'}"
+    ql = @queue.length
+    puts "#{ql} attendees found#{ql > 0 ? ' and added to queue.' : '.'}"
     queue_print
   end
 
@@ -131,7 +131,8 @@ class EventReporter
   end
 
   def calculate_print_padding
-    all_words = @queue.first.headers.split(' ').push @queue.map {|attendee| attendee.values}
+    headers = @queue.first.headers
+    all_words = headers.split(' ').push @queue.map {|attendee| attendee.values}
     [20, all_words.flatten.compact.map(&:length).max].min
   end
 
@@ -178,12 +179,12 @@ class EventReporter
     self.send(command.to_sym, arguments)
   end
 
-  def save(arguments)
-    errormessage = "Invalid save. Try 'save to <filename>'."
-    puts errormessage and return false unless arguments.length == 2 && arguments.first == 'to'
+  def save(arg)
+    e = "Invalid save. Try 'save to <filename>'."
+    puts e and return false unless arg.length == 2 && arg.first == 'to'
 
     headers = setup_headers
-    filename = arguments.last
+    filename = arg.last
     CSV.open(filename, 'wb') do |output|
       output << headers
 
@@ -206,7 +207,7 @@ class EventReporter
   def setup_values(headers, attendee)
     values = []
 
-    if headers == Attendee.default_headers 
+    if headers == Attendee.default_headers
       values = default_values(headers, attendee)
     else
       #get values from marshal_dump
